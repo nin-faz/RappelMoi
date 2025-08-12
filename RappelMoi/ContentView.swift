@@ -3,9 +3,30 @@ import SwiftUI
 struct ContentView: View {
     // On crée une instance observée du SpeechManager
     @StateObject private var speechManager = SpeechManager()
+    
+    // Date sélectionnée dans la modale (par défaut maintenant)
+    @State private var selectedDate = Date()
+    
+    // Booléen pour afficher/masquer la modale de date
+    @State private var showDatePicker = false
+    
+    // Texte reconnu en attente d’être ajouté en rappel
+    @State private var pendingReminderText = ""
 
     var body: some View {
         VStack(spacing: 20) {
+            ZStack {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 100))
+                    .foregroundColor(.blue.opacity(0.5))
+                    .offset(x: -15)
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 100))
+                    .foregroundColor(.blue)
+                    .offset(x: 15)
+            }
+            .frame(width: 100, height: 150)
+
             // 🧠 Header stylé
             VStack(spacing: 10) {
                 // 🔔 Icône + Titre
@@ -23,6 +44,28 @@ struct ContentView: View {
                 // 📏 Divider stylé
                 Divider()
                     .background(Color.blue.opacity(0.7))
+                
+                // Liste des rappels enregistrés
+                if speechManager.reminders.isEmpty {
+                    Text("Aucun rappel enregistré pour l’instant.")
+                        .foregroundColor(.gray)
+                        .italic()
+                        .padding()
+                } else {
+                    List {
+                        ForEach(speechManager.reminders) { reminder in
+                            VStack(alignment: .leading) {
+                                Text(reminder.text)
+                                    .font(.body)
+                                Text(reminder.date, style: .date) + Text(" ") + Text(reminder.date, style: .time)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(5)
+                        }
+                    }
+                    .frame(maxHeight: 250) // Limite la hauteur de la liste
+                }
             }
             .frame(maxWidth: .infinity, alignment: .top)
             
@@ -71,6 +114,28 @@ struct ContentView: View {
                     .cornerRadius(10)
             }
         }
+        // Modale pour choisir la date et l’heure du rappel
+        .sheet(isPresented: $showDatePicker) {
+            ReminderDatePickerView(selectedDate: $selectedDate, onValidate: {
+                speechManager.addReminder(text: pendingReminderText, date: selectedDate) // Ajout du rappel
+                showDatePicker = false
+                pendingReminderText = ""
+            }, onCancel: {
+                showDatePicker = false
+                pendingReminderText = ""
+            })
+        }
+        
+        .onChange(of: speechManager.recognizedText) { newValue, _ in
+            print("Texte reconnu changé : \(newValue)")  // <--- ça doit s'afficher dans ta console
+            if !newValue.isEmpty && !speechManager.isRecording {
+                pendingReminderText = newValue
+                selectedDate = Date()
+                showDatePicker = true
+            }
+        }
+
+
         // ⚠️ L'alerte doit être ici : sur la vue entière
         .alert(item: $speechManager.alertMessage) { alert in
             Alert(

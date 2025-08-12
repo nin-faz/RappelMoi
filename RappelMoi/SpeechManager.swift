@@ -20,6 +20,7 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published var isSpeaking = false    // Est-ce que la synthèse vocale parle ?
     @Published var alertMessage: AlertWrapper? // Message d'alerte à afficher en cas d'erreur ou problème
     @Published var readyToListen = false // Pour enregistrer notre voix juste après le son d'activation vocale
+    @Published var reminders: [Reminder] = [] // Liste observable de rappels que l'on va afficher dans l'UI
     
     private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "fr-FR")) // Reconnaissance vocale FR
     private let audioEngine = AVAudioEngine() // Gère l'entrée audio du micro
@@ -169,6 +170,16 @@ class SpeechManager: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         } catch {
             alertMessage = AlertWrapper(message: "Erreur : \(error.localizedDescription)")
         }
+    }
+    
+    // Fonction pour ajouter un nouveau rappel à la liste
+    func addReminder(text: String, date: Date) {
+        guard date >= Date() else {
+            alertMessage = AlertWrapper(message: "Impossible de mettre un rappel dans le passé.")
+            return
+        }
+        let newReminder = Reminder(text: text, date: date)  // Crée un rappel avec le texte et la date fournis
+        reminders.append(newReminder) // Ajoute ce rappel à la liste
     }
 }
 
